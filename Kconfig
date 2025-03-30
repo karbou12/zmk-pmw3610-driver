@@ -123,24 +123,6 @@ config PMW3610_REST3_SAMPLE_TIME_MS
       Minimum value is 10.
       No optimal value provided by datasheet.
 
-choice
-    prompt "Select PMW3610 sensor orientation"
-    default PMW3610_ORIENTATION_0
-
-config PMW3610_ORIENTATION_0
-    bool "PMW3610 not rotated"
-
-config PMW3610_ORIENTATION_90
-    bool "PMW3610 rotated 90 deg clockwise"
-
-config PMW3610_ORIENTATION_180
-    bool "PMW3610 rotated 180 deg clockwise"
-
-config PMW3610_ORIENTATION_270
-    bool "PMW3610 rotated 270 deg clockwise"
-
-endchoice
-
 config PMW3610_INVERT_X
   bool "Invert the X axis of PMW3610 sensor"
 
