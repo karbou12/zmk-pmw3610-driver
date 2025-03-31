@@ -644,7 +644,8 @@ static int pmw3610_report_data(const struct device *dev) {
     int16_t y;
 
     // MOVE時は現在のレイヤー、SCROLL時はlast_orientation_layerに基づいて変換
-    uint8_t layer_to_apply = (input_mode == SCROLL) ? last_orientation_layer : current_layer;
+    // uint8_t layer_to_apply = (input_mode == SCROLL) ? last_orientation_layer : current_layer;
+    uint8_t layer_to_apply = last_orientation_layer;
 
     switch (layer_to_apply) {
     case 1: // 45°
