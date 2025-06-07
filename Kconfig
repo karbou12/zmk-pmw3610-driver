@@ -141,6 +141,18 @@ config PMW3610_AUTOMOUSE_TIMEOUT_MS
   int "Amount of milliseconds the mouse layer will be active after using the trackball"
   default 400
 
+config PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS
+  int "Sample time for direction detection"
+  default 100
+
+config PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD
+  int "Threshold of distance for direction detection"
+  default 60
+
+config PMW3610_DIRECTION_DETECTION_LAYER
+  int "Layer to enable direction detection"
+  default 11
+
 module = PMW3610
 module-str = PMW3610
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
