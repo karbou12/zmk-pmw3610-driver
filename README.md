@@ -1,3 +1,62 @@
+
+## 背景
+
+menbou0202 さんが作成した [Nape Trackball](https://men-bou.net/nape/) というトラックボールと3つのキーが付いたキーボードがあります。
+
+裏面ボタンを使ったレイヤー移動により、8方向に向きを変更することが可能な素晴らしいキーボードなのですが、
+私の使用用途では、結構な頻度で向きを変更するのと、どのボタンにどの向きを割り当てたか忘れることが多いので、
+裏ボタンを使用せずに向き変更できるようにしました。
+
+他のトラックボールでも流用できると思いますので、参考になれば幸いです。
+
+## Napeでの使用方法
+
+向き切り替えレイヤー(レイヤー 11) にして、使用したい向きにNapeを置いて、トラックボールを下から上に勢いよく回してください。
+尚、検出のため向き切り替えレイヤーでは、トラックボールが移動しないようにしています。
+
+オリジナルのNape同様に8方向をサポートしています。
+
+デフォルトでは、向き切り替えレイヤーは裏ボタン3に割り振られていて、そのままでは使用しにくいと思うので、
+表のキーに割り振るのをお勧めします。
+
+私はスクロールレイヤー(レイヤー 10)で各キーの長押しに設定しています。([参考](https://github.com/karbou12/zmk-config-nape/commit/c9a35251dd426845dceecc40133c91e8d53b4f88))
+
+
+## Napeでの設定方法
+
+### driverの変更
+
+fork した zmk-config-nape 上の config/west.yml で membou0202さんの zmk-pmw3610-driver が指定されている箇所を
+本driverを指定するように修正してください。([参考](https://github.com/karbou12/zmk-config-nape/commit/4b1e7d576113282eefadaf7c6e0dc235af51ce8e))
+
+### config設定 (Option)
+
+以下のconfig設定が可能です。変更したい場合は、config/boards/shields/nape/nape.conf に追加して適宜値を変更してください。([参考](https://github.com/karbou12/zmk-config-nape/commit/4b1e7d576113282eefadaf7c6e0dc235af51ce8e))
+
+```
+// 向き検出の時間と閾値。デフォルトでは、100ms以内に 60 pixel (多分...) 以上移動したらその向きに設定します。
+CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS=100
+CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD=60
+
+// 向き検出するレイヤー
+CONFIG_PMW3610_DIRECTION_DETECTION_LAYER=11
+```
+
+## アルゴリズム (興味があるかた向け)
+
+向き検出レイヤー上で、一定時間内に閾値距離以上トラックボールが回ったら、移動座標から方向を検出しているだけです。
+
+方向の検出は、[こちらの記事](https://qiita.com/arthur87/items/23d3c896dafbc8223fd5) を参考にしました。
+
+時間と閾値は適当な初期値でうまくいったので、そのままにしており、細かい調整はしていません。
+
+Napeでは設定されたレイヤーに従って方向を決めて座標変換しているので、そこはそのまま流用しました。
+そのためNapeと同じく8方向のサポートとなっていますが、少し手を加えればより細かい方向も可能だと思います。
+
+---
+
+以下、オリジナルのREADME。
+
 PMW3610 driver implementation for ZMK with at least Zephyr 3.5
 
 This work is based on [ufan's implementation](https://github.com/ufan/zmk/tree/support-trackpad) of the driver.
