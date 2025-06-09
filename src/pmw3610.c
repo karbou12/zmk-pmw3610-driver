@@ -696,47 +696,16 @@ static int pmw3610_report_data(const struct device *dev) {
         return 0;
     }
 
-    int16_t x;
-    int16_t y;
-
     // MOVE時は現在のレイヤー、SCROLL時はlast_orientation_layerに基づいて変換
     // uint8_t layer_to_apply = (input_mode == SCROLL) ? last_orientation_layer : current_layer;
     uint8_t layer_to_apply = (detected_direction == -1) ? last_orientation_layer : detected_direction;
 
-    switch (layer_to_apply) {
-    case 1: // 45°
-        x = ((raw_x + raw_y) * 100) / 141;
-        y = ((raw_y - raw_x) * 100) / 141;
-        break;
-    case 2: // 90°
-        x = raw_y;
-        y = -raw_x;
-        break;
-    case 3: // 135°
-        x = ((raw_y - raw_x) * 100) / 141;
-        y = -((raw_x + raw_y) * 100) / 141;
-        break;
-    case 4: // 180°
-        x = -raw_x;
-        y = -raw_y;
-        break;
-    case 5: // 225°
-        x = -((raw_x + raw_y) * 100) / 141;
-        y = -((raw_y - raw_x) * 100) / 141;
-        break;
-    case 6: // 270°
-        x = -raw_y;
-        y = raw_x;
-        break;
-    case 7: // 315°
-        x = -((raw_y - raw_x) * 100) / 141;
-        y = ((raw_x + raw_y) * 100) / 141;
-        break;
-    default: // 0°
-        x = raw_x;
-        y = raw_y;
-        break;
-    }
+    const int AUTO_DETECT_DIRECTION_NUMBERS = 8;
+    const int direction_angle = 360 / AUTO_DETECT_DIRECTION_NUMBERS;
+    const double radian = layer_to_apply * direction_angle * (M_PI / 180);
+
+    int16_t x = (int16_t)(raw_x * cos(radian) + raw_y * sin(radian));
+    int16_t y = (int16_t)(- raw_x * sin(radian) + raw_y * cos(radian));
 
     if (IS_ENABLED(CONFIG_PMW3610_INVERT_X)) {
         x = -x;
