@@ -586,9 +586,6 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     static int prev_y = 0;
     static int64_t prev_time = 0;
 
-    const int AUTO_DETECT_DIRECTION_NUMBERS = 8;
-    const int AUTO_DETECT_DIRECTION_ANGLE = 360 / AUTO_DETECT_DIRECTION_NUMBERS;
-
     int64_t curr_time = k_uptime_get();
 
     if (prev_time == 0) {
@@ -614,25 +611,17 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
         radian = radian + 2 * M_PI;
     }
 
-    const double angle = floor(radian * 360 / (2 * M_PI));
-    // detected_layer = (int8_t)((angle + AUTO_DETECT_DIRECTION_ANGLE / 2) / AUTO_DETECT_DIRECTION_ANGLE);
-    if (23 <= angle && angle <= 67) {
-        return 3;
-    } else if (68 <= angle && angle <= 112) {
-        return 4;
-    } else if (113 <= angle && angle <= 157) {
-        return 5;
-    } else if (158 <= angle && angle <= 202) {
-        return 6;
-    } else if (203 <= angle && angle <= 247) {
-        return 7;
-    } else if (248 <= angle && angle <= 292) {
-        return 0;
-    } else if (293 <= angle && angle <= 337) {
-        return 1;
-    } else {
-        return 2;
+    const int AUTO_DETECT_DIRECTION_NUMBERS = 8;
+    const int direction_angle = 360 / AUTO_DETECT_DIRECTION_NUMBERS;
+
+    int angle = (int)(radian * 360 / (2 * M_PI));
+    angle -= 270;
+    angle += (int)(direction_angle / 2);
+    if (angle < 0) {
+        angle += 360;
     }
+
+    return (int8_t)(angle / direction_angle);
 }
 
 static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
