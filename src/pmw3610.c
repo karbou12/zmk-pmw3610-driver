@@ -611,17 +611,14 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
         radian = radian + 2 * M_PI;
     }
 
-    const int AUTO_DETECT_DIRECTION_NUMBERS = 8;
-    const int direction_angle = 360 / AUTO_DETECT_DIRECTION_NUMBERS;
-
     int angle = (int)(radian * 360 / (2 * M_PI));
     angle -= 270;
-    angle += (int)(direction_angle / 2);
+    angle += (int)(CONFIG_PMW3610_DIRECTION_ANGLE / 2);
     if (angle < 0) {
         angle += 360;
     }
 
-    return (int8_t)(angle / direction_angle);
+    return (int8_t)(angle / CONFIG_PMW3610_DIRECTION_ANGLE);
 }
 
 static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
@@ -700,9 +697,7 @@ static int pmw3610_report_data(const struct device *dev) {
     // uint8_t layer_to_apply = (input_mode == SCROLL) ? last_orientation_layer : current_layer;
     uint8_t layer_to_apply = (detected_direction == -1) ? last_orientation_layer : detected_direction;
 
-    const int AUTO_DETECT_DIRECTION_NUMBERS = 8;
-    const int direction_angle = 360 / AUTO_DETECT_DIRECTION_NUMBERS;
-    const double radian = layer_to_apply * direction_angle * (M_PI / 180);
+    const double radian = layer_to_apply * CONFIG_PMW3610_DIRECTION_ANGLE * (M_PI / 180);
 
     int16_t x = (int16_t)(raw_x * cos(radian) + raw_y * sin(radian));
     int16_t y = (int16_t)(- raw_x * sin(radian) + raw_y * cos(radian));
