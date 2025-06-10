@@ -153,6 +153,10 @@ config PMW3610_DIRECTION_DETECTION_LAYER
   int "Layer to enable direction detection"
   default 11
 
+config PMW3610_DIRECTION_ANGLE
+  int "Angle of each direction"
+  default 45
+
 module = PMW3610
 module-str = PMW3610
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
