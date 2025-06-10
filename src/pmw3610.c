@@ -693,11 +693,10 @@ static int pmw3610_report_data(const struct device *dev) {
         return 0;
     }
 
-    // MOVE時は現在のレイヤー、SCROLL時はlast_orientation_layerに基づいて変換
-    // uint8_t layer_to_apply = (input_mode == SCROLL) ? last_orientation_layer : current_layer;
-    uint8_t layer_to_apply = (detected_direction == -1) ? last_orientation_layer : detected_direction;
-
-    const double radian = layer_to_apply * CONFIG_PMW3610_DIRECTION_ANGLE * (M_PI / 180);
+    const double angle = (detected_direction == -1)
+        ? last_orientation_layer * 45
+        : detected_direction * CONFIG_PMW3610_DIRECTION_ANGLE;
+    const double radian = angle * (M_PI / 180);
 
     int16_t x = (int16_t)(raw_x * cos(radian) + raw_y * sin(radian));
     int16_t y = (int16_t)(- raw_x * sin(radian) + raw_y * cos(radian));
