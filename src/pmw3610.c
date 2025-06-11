@@ -582,31 +582,28 @@ static enum pixart_input_mode get_input_mode_for_current_layer(const struct devi
 }
 
 static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_detected_direction) {
-    static int prev_x = 0;
-    static int prev_y = 0;
+    static int x = 0;
+    static int y = 0;
     static int64_t prev_time = 0;
 
     int64_t curr_time = k_uptime_get();
 
     if (prev_time == 0) {
         prev_time = curr_time;
-        prev_x = cur_x;
-        prev_y = cur_y;
+        x = cur_x;
+        y = cur_y;
         return prev_detected_direction;
     }
 
-    if ((curr_time - prev_time) > CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS) {
-        prev_time = 0;
-        prev_x = 0;
-        prev_y = 0;
+    x += cur_x;
+    y += cur_y;
+
+    if ((curr_time - prev_time) < CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS) {
         return prev_detected_direction;
     }
 
-    if ((pow(cur_x - prev_x, 2) + pow(cur_y - prev_y, 2)) < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
-        return prev_detected_direction;
-    }
-
-    double radian = atan2(cur_y - prev_y, cur_x - prev_x);
+    const double distance = pow(x, 2) + pow(y, 2);
+    double radian = atan2(y, x);
     if (radian < 0) {
         radian = radian + 2 * M_PI;
     }
@@ -616,6 +613,14 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     angle += (int)(CONFIG_PMW3610_DIRECTION_ANGLE / 2);
     if (angle < 0) {
         angle += 360;
+    }
+
+    prev_time = 0;
+    x = 0;
+    y = 0;
+
+    if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
+        return prev_detected_direction;
     }
 
     return (int8_t)(angle / CONFIG_PMW3610_DIRECTION_ANGLE);
