@@ -690,12 +690,24 @@ static int pmw3610_report_data(const struct device *dev) {
         TOINT16((buf[PMW3610_Y_L_POS] + ((buf[PMW3610_XY_H_POS] & 0x0F) << 8)), 12) / dividor;
 
     static int8_t detected_direction = -1;
+    static bool is_direction_changed = false;
 
-    if ((input_mode == MOVE) &&
-        (zmk_keymap_highest_layer_active() == CONFIG_PMW3610_DIRECTION_DETECTION_LAYER)) {
+    if (input_mode == MOVE) {
+        if (zmk_keymap_highest_layer_active() == CONFIG_PMW3610_DIRECTION_DETECTION_LAYER) {
+            if (is_direction_changed) {
+                return 0;
+            }
 
-        detected_direction = detect_direction(raw_x, raw_y, detected_direction);
-        return 0;
+            const int8_t cur_detected_direction = detect_direction(raw_x, raw_y, detected_direction);
+            if (detected_direction != cur_detected_direction) {
+                detected_direction = cur_detected_direction;
+                is_direction_changed = true;
+            }
+
+            return 0;
+        } else {
+            is_direction_changed = false;
+        }
     }
 
     const double angle = (detected_direction == -1)
