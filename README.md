@@ -32,18 +32,17 @@ fork した zmk-config-nape 上の config/west.yml で membou0202さんの zmk-p
 ### config設定 (Option)
 
 以下のconfig設定が可能です。変更したい場合は、config/boards/shields/nape/nape.conf に追加して適宜値を変更してください。
-([参考1](https://github.com/karbou12/zmk-config-nape/commit/4b1e7d576113282eefadaf7c6e0dc235af51ce8e) [参考2](https://github.com/karbou12/zmk-config-nape/commit/14829d5927cc872aa5d83d9106b163943a6293cd))
 
 ```
-// 向き検出の時間と閾値。デフォルトでは、100ms以内に 60 pixel (多分...) 以上移動したらその向きに設定します。
+// 向き検出の時間と閾値。デフォルトでは、100msで 1000 pixel 以上移動したらその向きに設定します。
 CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS=100
-CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD=60
+CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD=1000
 
 // 向き検出するレイヤー
 CONFIG_PMW3610_DIRECTION_DETECTION_LAYER=11
 
 // 1方向あたりの角度。デフォルトでは45度 (360/45 = 8方向) になっています。
-CONFIG_PMW3610_DIRECTION_ANGLE=10
+CONFIG_PMW3610_DIRECTION_ANGLE=45
 ```
 
 ## アルゴリズム (興味があるかた向け)
