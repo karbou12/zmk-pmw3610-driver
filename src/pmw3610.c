@@ -581,6 +581,17 @@ static enum pixart_input_mode get_input_mode_for_current_layer(const struct devi
     return MOVE;
 }
 
+static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
+
+static int calc_angle_for_direction(const int direction) {
+    return (direction == -1) ? last_orientation_layer * 45 : direction * CONFIG_PMW3610_DIRECTION_ANGLE;
+}
+
+static int calc_angle_in_range(const int degree) {
+    const int angle = (int)fmod((double)degree, 360.0f);
+    return (angle >= 0) ? angle : angle + 360;
+}
+
 static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_detected_direction) {
     static int x = 0;
     static int y = 0;
@@ -608,25 +619,37 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
         radian = radian + 2 * M_PI;
     }
 
-    int angle = (int)(radian * 360 / (2 * M_PI));
-    angle -= 270;
-    angle += (int)(CONFIG_PMW3610_DIRECTION_ANGLE / 2);
-    if (angle < 0) {
-        angle += 360;
-    }
-
     prev_time = 0;
     x = 0;
     y = 0;
 
-    if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
+    int angle = (int)(radian * 360 / (2 * M_PI));
+
+    bool is_shift_mode = false;
+
+    if (distance < pow(CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD, 2)) {
         return prev_detected_direction;
+    } else if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
+        is_shift_mode = true;
     }
+
+    if (is_shift_mode) {
+        const int cur_angle = calc_angle_in_range(angle - calc_angle_for_direction(prev_detected_direction));
+        const int8_t cur_direction = (prev_detected_direction == -1) ? last_orientation_layer : prev_detected_direction;
+        const int8_t next_direction = (cur_angle < 90 || 270 < cur_angle) ? cur_direction - 1 : cur_direction + 1;
+
+        const int max_direction = 360 / CONFIG_PMW3610_DIRECTION_ANGLE;
+        return (next_direction < 0) ? max_direction - 1
+            : (max_direction <= next_direction) ? 0
+            : next_direction;
+    }
+
+    angle -= 270;
+    angle += (int)(CONFIG_PMW3610_DIRECTION_ANGLE / 2);
+    angle = calc_angle_in_range(angle);
 
     return (int8_t)(angle / CONFIG_PMW3610_DIRECTION_ANGLE);
 }
-
-static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
 
 static int pmw3610_report_data(const struct device *dev) {
     struct pixart_data *data = dev->data;
@@ -643,7 +666,7 @@ static int pmw3610_report_data(const struct device *dev) {
 
     uint8_t current_layer = zmk_keymap_highest_layer_active();
 
-    if (input_mode == MOVE) {
+    if (input_mode == MOVE && (current_layer != CONFIG_PMW3610_DIRECTION_DETECTION_LAYER)) {
         // MOVEモードでは現在のレイヤーを記録
         last_orientation_layer = current_layer;
     }
@@ -710,9 +733,7 @@ static int pmw3610_report_data(const struct device *dev) {
         }
     }
 
-    const double angle = (detected_direction == -1)
-        ? last_orientation_layer * 45
-        : detected_direction * CONFIG_PMW3610_DIRECTION_ANGLE;
+    const int angle = calc_angle_for_direction(detected_direction);
     const double radian = angle * (M_PI / 180);
 
     int16_t x = (int16_t)(raw_x * cos(radian) + raw_y * sin(radian));
