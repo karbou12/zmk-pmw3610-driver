@@ -635,10 +635,12 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
 
     if (is_shift_mode) {
         const int cur_angle = calc_angle_in_range(angle - calc_angle_for_direction(prev_detected_direction));
-        const int8_t cur_direction = (prev_detected_direction == -1) ? last_orientation_layer : prev_detected_direction;
+        const int max_direction = 360 / CONFIG_PMW3610_DIRECTION_ANGLE;
+        const int8_t cur_direction = (prev_detected_direction == -1)
+            ? (int8_t)(last_orientation_layer * (max_direction / 8.0))
+            : prev_detected_direction;
         const int8_t next_direction = (cur_angle < 90 || 270 < cur_angle) ? cur_direction - 1 : cur_direction + 1;
 
-        const int max_direction = 360 / CONFIG_PMW3610_DIRECTION_ANGLE;
         return (next_direction < 0) ? max_direction - 1
             : (max_direction <= next_direction) ? 0
             : next_direction;
