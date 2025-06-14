@@ -149,6 +149,10 @@ config PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD
   int "Threshold of distance for direction detection"
   default 1000
 
+config PMW3610_DIRECTION_SHIFT_THRESHOLD
+  int "Threshold to shift direction"
+  default 300
+
 config PMW3610_DIRECTION_DETECTION_LAYER
   int "Layer to enable direction detection"
   default 11
