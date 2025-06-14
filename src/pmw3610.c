@@ -582,19 +582,20 @@ static enum pixart_input_mode get_input_mode_for_current_layer(const struct devi
 }
 
 static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
+static uint8_t direction_angle = 0;
 
-static int calc_angle_for_direction(const int direction) {
-    return (direction == -1) ? last_orientation_layer * 45 : direction * CONFIG_PMW3610_DIRECTION_ANGLE;
+static int16_t calc_angle_for_direction(const int8_t direction) {
+    return (direction == -1) ? last_orientation_layer * 45 : direction * direction_angle;
 }
 
-static int calc_angle_in_range(const int degree) {
-    const int angle = (int)fmod((double)degree, 360.0f);
+static int16_t calc_angle_in_range(const int16_t degree) {
+    const int16_t angle = (int16_t)fmod((double)degree, 360.0f);
     return (angle >= 0) ? angle : angle + 360;
 }
 
-static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_detected_direction) {
-    static int x = 0;
-    static int y = 0;
+static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_direction) {
+    static int16_t x = 0;
+    static int16_t y = 0;
     static int64_t prev_time = 0;
 
     int64_t curr_time = k_uptime_get();
@@ -603,14 +604,14 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
         prev_time = curr_time;
         x = cur_x;
         y = cur_y;
-        return prev_detected_direction;
+        return prev_direction;
     }
 
     x += cur_x;
     y += cur_y;
 
     if ((curr_time - prev_time) < CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS) {
-        return prev_detected_direction;
+        return prev_direction;
     }
 
     const double distance = pow(x, 2) + pow(y, 2);
@@ -623,22 +624,21 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     x = 0;
     y = 0;
 
-    int angle = (int)(radian * 360 / (2 * M_PI));
+    int16_t angle = (int16_t)(radian * 360 / (2 * M_PI));
 
     bool is_shift_mode = false;
 
     if (distance < pow(CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD, 2)) {
-        return prev_detected_direction;
+        return prev_direction;
     } else if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
         is_shift_mode = true;
     }
 
     if (is_shift_mode) {
-        const int cur_angle = calc_angle_in_range(angle - calc_angle_for_direction(prev_detected_direction));
-        const int max_direction = 360 / CONFIG_PMW3610_DIRECTION_ANGLE;
-        const int8_t cur_direction = (prev_detected_direction == -1)
-            ? (int8_t)(last_orientation_layer * (max_direction / 8.0))
-            : prev_detected_direction;
+        const int16_t cur_angle = calc_angle_in_range(angle - calc_angle_for_direction(prev_direction));
+        const int8_t max_direction = 360 / direction_angle;
+        const int8_t cur_direction = (prev_direction != -1) ? prev_direction
+            : (int8_t)(last_orientation_layer * (max_direction / 8.0));
         const int8_t next_direction = (cur_angle < 90 || 270 < cur_angle) ? cur_direction - 1 : cur_direction + 1;
 
         return (next_direction < 0) ? max_direction - 1
@@ -647,10 +647,10 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     }
 
     angle -= 270;
-    angle += (int)(CONFIG_PMW3610_DIRECTION_ANGLE / 2);
+    angle += (int16_t)(direction_angle / 2);
     angle = calc_angle_in_range(angle);
 
-    return (int8_t)(angle / CONFIG_PMW3610_DIRECTION_ANGLE);
+    return (int8_t)(angle / direction_angle);
 }
 
 static int pmw3610_report_data(const struct device *dev) {
@@ -714,7 +714,7 @@ static int pmw3610_report_data(const struct device *dev) {
     int16_t raw_y =
         TOINT16((buf[PMW3610_Y_L_POS] + ((buf[PMW3610_XY_H_POS] & 0x0F) << 8)), 12) / dividor;
 
-    static int8_t detected_direction = -1;
+    static int8_t direction = -1;
     static bool is_direction_changed = false;
 
     if (input_mode == MOVE) {
@@ -723,9 +723,9 @@ static int pmw3610_report_data(const struct device *dev) {
                 return 0;
             }
 
-            const int8_t cur_detected_direction = detect_direction(raw_x, raw_y, detected_direction);
-            if (detected_direction != cur_detected_direction) {
-                detected_direction = cur_detected_direction;
+            const int8_t detected_direction = detect_direction(raw_x, raw_y, direction);
+            if (direction != detected_direction) {
+                direction = detected_direction;
                 is_direction_changed = true;
             }
 
@@ -735,7 +735,7 @@ static int pmw3610_report_data(const struct device *dev) {
         }
     }
 
-    const int angle = calc_angle_for_direction(detected_direction);
+    const int16_t angle = calc_angle_for_direction(direction);
     const double radian = angle * (M_PI / 180);
 
     int16_t x = (int16_t)(raw_x * cos(radian) + raw_y * sin(radian));
@@ -875,6 +875,11 @@ static int pmw3610_init(const struct device *dev) {
 
     // 🔹 ここで last_orientation_layer を初期化
     last_orientation_layer = default_layer;
+
+    direction_angle = CONFIG_PMW3610_DIRECTION_ANGLE;
+    while(360 % direction_angle != 0) {
+        direction_angle++;
+    };
 
     // init device pointer
     data->dev = dev;
