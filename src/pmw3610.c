@@ -628,10 +628,14 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
 
     bool is_shift_mode = false;
 
-    if (distance < pow(CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD, 2)) {
-        return prev_direction;
+    if (CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD > 0) {
+        if (distance < pow(CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD, 2)) {
+            return prev_direction;
+        } else if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
+            is_shift_mode = true;
+        }
     } else if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
-        is_shift_mode = true;
+        return prev_direction;
     }
 
     if (is_shift_mode) {
