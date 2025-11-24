@@ -553,7 +553,7 @@ static bool automouse_triggered = false;
 
 static void activate_automouse_layer() {
     automouse_triggered = true;
-    zmk_keymap_layer_activate(AUTOMOUSE_LAYER);
+    zmk_keymap_layer_activate(AUTOMOUSE_LAYER, false);
     k_timer_start(&automouse_layer_timer, K_MSEC(CONFIG_PMW3610_AUTOMOUSE_TIMEOUT_MS), K_NO_WAIT);
 }
 
@@ -1013,7 +1013,7 @@ static int pmw3610_init(const struct device *dev) {
     // 🆕 起動時にデフォルトレイヤーを適用
     uint8_t default_layer = CONFIG_NAPE_DEFAULT_LAYER;
     LOG_INF("Setting default layer to %d", default_layer);
-    zmk_keymap_layer_activate(default_layer);
+    zmk_keymap_layer_activate(default_layer, false);
 
     // 🔹 ここで last_orientation_layer を初期化
     last_orientation_layer = default_layer;
