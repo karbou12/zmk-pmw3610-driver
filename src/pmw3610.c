@@ -604,7 +604,7 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     int64_t curr_time = k_uptime_get();
 
     const int64_t diff_time = curr_time - prev_time;
-    if (prev_time == 0) {
+    if ((prev_time == 0) || (diff_time > CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS * 2)) {
         LOG_DBG("detection begin at %lld", curr_time);
         prev_time = curr_time;
         x = cur_x;
