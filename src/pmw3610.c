@@ -594,13 +594,18 @@ static int16_t calc_angle_in_range(const int16_t degree) {
 }
 
 static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_direction) {
+    const static int32_t dir_shift_threshold = CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD * CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD;
+    const static int32_t dir_detect_threshold = CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD * CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD;
+
     static int16_t x = 0;
     static int16_t y = 0;
     static int64_t prev_time = 0;
 
     int64_t curr_time = k_uptime_get();
 
+    const int64_t diff_time = curr_time - prev_time;
     if (prev_time == 0) {
+        LOG_DBG("detection begin at %lld", curr_time);
         prev_time = curr_time;
         x = cur_x;
         y = cur_y;
@@ -610,15 +615,25 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     x += cur_x;
     y += cur_y;
 
-    if ((curr_time - prev_time) < CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS) {
+    const int32_t distance = x * x + y * y;
+
+    if (diff_time < CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS) {
+        LOG_DBG("under detection [dst:%d %d -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
+                x, y, distance, dir_shift_threshold, dir_detect_threshold,
+                curr_time, prev_time,
+                diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
         return prev_direction;
     }
 
-    const double distance = pow(x, 2) + pow(y, 2);
     double radian = atan2(y, x);
     if (radian < 0) {
         radian = radian + 2 * M_PI;
     }
+
+    LOG_INF("finish detection [dst:%d %d -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
+            x, y, distance, dir_shift_threshold, dir_detect_threshold,
+            curr_time, prev_time,
+            diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
 
     prev_time = 0;
     x = 0;
@@ -629,12 +644,15 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     bool is_shift_mode = false;
 
     if (CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD > 0) {
-        if (distance < pow(CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD, 2)) {
+        if (distance < dir_shift_threshold) {
             return prev_direction;
-        } else if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
+        } else if (distance < dir_detect_threshold) {
+            LOG_INF(">>>>>>>>>> shift direction to next");
             is_shift_mode = true;
+        } else {
+            LOG_INF("********** change direction");
         }
-    } else if (distance < pow(CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD, 2)) {
+    } else if (distance < dir_detect_threshold) {
         return prev_direction;
     }
 
@@ -862,17 +880,20 @@ static int pmw3610_report_data(const struct device *dev) {
     if (input_mode == MOVE) {
         if (zmk_keymap_highest_layer_active() == CONFIG_PMW3610_DIRECTION_DETECTION_LAYER) {
             if (is_direction_changed) {
+                LOG_DBG("skip to detect direction");
                 return 0;
             }
 
             const int8_t detected_direction = detect_direction(raw_x, raw_y, direction);
             if (direction != detected_direction) {
+                LOG_INF("direction %d -> %d", direction, detected_direction);
                 direction = detected_direction;
                 is_direction_changed = true;
             }
 
             return 0;
-        } else {
+        } else if (is_direction_changed) {
+            LOG_DBG("reset is_direction_changed");
             is_direction_changed = false;
         }
     }
