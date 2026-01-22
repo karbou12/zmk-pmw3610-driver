@@ -630,16 +630,16 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
         radian = radian + 2 * M_PI;
     }
 
-    LOG_INF("finish detection [dst:%d %d -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
-            x, y, distance, dir_shift_threshold, dir_detect_threshold,
+    int16_t angle = (int16_t)(radian * 360 / (2 * M_PI));
+
+    LOG_INF("finish detection [dst:%d %d (angle:%d) -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
+            x, y, angle, distance, dir_shift_threshold, dir_detect_threshold,
             curr_time, prev_time,
             diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
 
     prev_time = 0;
     x = 0;
     y = 0;
-
-    int16_t angle = (int16_t)(radian * 360 / (2 * M_PI));
 
     bool is_shift_mode = false;
 
@@ -658,6 +658,7 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
 
     if (is_shift_mode) {
         const int16_t cur_angle = calc_angle_in_range(angle - calc_angle_for_direction(prev_direction));
+        LOG_INF("diff angle:%d", cur_angle);
         const int8_t max_direction = 360 / direction_angle;
         const int8_t cur_direction = (prev_direction != -1) ? prev_direction
             : (int8_t)(last_orientation_layer * (max_direction / 8.0));
@@ -671,6 +672,7 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     angle -= 270;
     angle += (int16_t)(direction_angle / 2);
     angle = calc_angle_in_range(angle);
+    LOG_INF("corrected angle:%d", angle);
 
     return (int8_t)(angle / direction_angle);
 }
