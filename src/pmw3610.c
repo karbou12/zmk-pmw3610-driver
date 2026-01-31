@@ -582,15 +582,15 @@ static enum pixart_input_mode get_input_mode_for_current_layer(const struct devi
 }
 
 static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
-static uint8_t direction_angle = 0;
+static uint8_t direction_degree = 0;
 
-static int16_t calc_angle_for_direction(const int8_t direction) {
-    return (direction == -1) ? last_orientation_layer * 45 : direction * direction_angle;
+static int16_t calc_degree_for_direction(const int8_t direction) {
+    return (direction == -1) ? last_orientation_layer * 45 : direction * direction_degree;
 }
 
-static int16_t calc_angle_in_range(const int16_t degree) {
-    const int16_t angle = (int16_t)fmod((double)degree, 360.0f);
-    return (angle >= 0) ? angle : angle + 360;
+static int16_t calc_degree_in_range(const int16_t degree) {
+    const int16_t mod = degree % 360;
+    return (mod >= 0) ? mod : mod + 360;
 }
 
 static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_direction) {
@@ -628,15 +628,11 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
         }
     }
 
-    double radian = atan2(y, x);
-    if (radian < 0) {
-        radian = radian + 2 * M_PI;
-    }
+    const double radian = atan2(y, x);
+    int16_t degree = (int16_t)(radian * 180 / M_PI);
 
-    int16_t angle = (int16_t)(radian * 360 / (2 * M_PI));
-
-    LOG_INF("finish detection [dst:%d %d (angle:%d) -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
-            x, y, angle, distance, dir_shift_threshold, dir_detect_threshold,
+    LOG_INF("finish detection [dst:%d %d (degree:%d) -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
+            x, y, degree, distance, dir_shift_threshold, dir_detect_threshold,
             curr_time, prev_time,
             diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
 
@@ -660,24 +656,24 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     }
 
     if (is_shift_mode) {
-        const int16_t cur_angle = calc_angle_in_range(angle - calc_angle_for_direction(prev_direction));
-        LOG_INF("diff angle:%d", cur_angle);
-        const int8_t max_direction = 360 / direction_angle;
+        const int16_t cur_degree = calc_degree_in_range(degree - calc_degree_for_direction(prev_direction));
+        LOG_INF("diff degree:%d", cur_degree);
+        const int8_t max_direction = 360 / direction_degree;
         const int8_t cur_direction = (prev_direction != -1) ? prev_direction
             : (int8_t)(last_orientation_layer * (max_direction / 8.0));
-        const int8_t next_direction = (cur_angle < 90 || 270 < cur_angle) ? cur_direction - 1 : cur_direction + 1;
+        const int8_t next_direction = (cur_degree < 90 || 270 < cur_degree) ? cur_direction - 1 : cur_direction + 1;
 
         return (next_direction < 0) ? max_direction - 1
             : (max_direction <= next_direction) ? 0
             : next_direction;
     }
 
-    angle -= 270;
-    angle += (int16_t)(direction_angle / 2);
-    angle = calc_angle_in_range(angle);
-    LOG_INF("corrected angle:%d", angle);
+    degree -= 270;
+    degree += (int16_t)(direction_degree / 2);
+    degree = calc_degree_in_range(degree);
+    LOG_INF("corrected degree:%d", degree);
 
-    return (int8_t)(angle / direction_angle);
+    return (int8_t)(degree / direction_degree);
 }
 
 #define USE_LUT
@@ -812,7 +808,7 @@ static void rotate_point(const int16_t raw_x, const int16_t raw_y, const int16_t
     *x = (int16_t)(raw_x * cos_tbl[degree] + raw_y * sin_tbl[degree]);
     *y = (int16_t)(- raw_x * sin_tbl[degree] + raw_y * cos_tbl[degree]);
 #else
-    const double radian = angle * (M_PI / 180);
+    const double radian = degree * (M_PI / 180);
     *x = (int16_t)(raw_x * cos(radian) + raw_y * sin(radian));
     *y = (int16_t)(- raw_x * sin(radian) + raw_y * cos(radian));
 #endif
@@ -903,11 +899,11 @@ static int pmw3610_report_data(const struct device *dev) {
         }
     }
 
-    const int16_t angle = calc_angle_for_direction(direction);
+    const int16_t degree = calc_degree_for_direction(direction);
 
     int16_t x = 0;
     int16_t y = 0;
-    rotate_point(raw_x, raw_y, angle, &x, &y);
+    rotate_point(raw_x, raw_y, degree, &x, &y);
 
     if (IS_ENABLED(CONFIG_PMW3610_INVERT_X)) {
         x = -x;
@@ -1044,9 +1040,9 @@ static int pmw3610_init(const struct device *dev) {
     // 🔹 ここで last_orientation_layer を初期化
     last_orientation_layer = default_layer;
 
-    direction_angle = CONFIG_PMW3610_DIRECTION_ANGLE;
-    while(360 % direction_angle != 0) {
-        direction_angle++;
+    direction_degree = CONFIG_PMW3610_DIRECTION_ANGLE;
+    while(360 % direction_degree != 0) {
+        direction_degree++;
     };
 
     // init device pointer
