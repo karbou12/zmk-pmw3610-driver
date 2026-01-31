@@ -622,7 +622,10 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
                 x, y, distance, dir_shift_threshold, dir_detect_threshold,
                 curr_time, prev_time,
                 diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
-        return prev_direction;
+
+        if (distance < dir_detect_threshold) {
+            return prev_direction;
+        }
     }
 
     double radian = atan2(y, x);
