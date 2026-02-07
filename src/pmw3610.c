@@ -1002,7 +1002,36 @@ static int pmw3610_report_data(const struct device *dev) {
 
     int16_t x = 0;
     int16_t y = 0;
+
+// #define CHECK_PERFORMANCE
+#ifdef CHECK_PERFORMANCE
+    static uint16_t log_count = 0;
+    static uint32_t min_diff_time = 0;
+    static uint32_t max_diff_time = 0;
+    static uint32_t total_time = 0;
+
+    const uint32_t enter_time = k_cycle_get_32();
+#endif
+
     rotate_point(raw_x, raw_y, degree, &x, &y);
+
+#ifdef CHECK_PERFORMANCE
+    const uint32_t leave_time = k_cycle_get_32();
+    const uint32_t diff_time = leave_time - enter_time;
+
+    min_diff_time = (min_diff_time == 0) ? diff_time : (MIN(min_diff_time, diff_time));
+    max_diff_time = MAX(max_diff_time, diff_time);
+    total_time += diff_time;
+    const uint16_t max_count = 1000;
+    if (log_count++ == max_count) {
+        LOG_WRN("[ROTATE PERFORMANCE] total time:%lu, ave:%lu, min:%lu, max:%lu\n",
+                total_time, total_time / max_count, min_diff_time, max_diff_time);
+        log_count = 0;
+        min_diff_time = 0;
+        max_diff_time = 0;
+        total_time = 0;
+    }
+#endif
 
     if (IS_ENABLED(CONFIG_PMW3610_INVERT_X)) {
         x = -x;
