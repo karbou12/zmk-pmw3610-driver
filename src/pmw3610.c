@@ -584,7 +584,7 @@ static enum pixart_input_mode get_input_mode_for_current_layer(const struct devi
 static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
 static uint8_t direction_degree = 0;
 
-static int16_t calc_degree_for_direction(const int8_t direction) {
+static uint16_t calc_degree_for_direction(const int8_t direction) {
     return (direction == -1) ? last_orientation_layer * 45 : direction * direction_degree;
 }
 
@@ -656,7 +656,7 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     }
 
     if (is_shift_mode) {
-        const int16_t cur_degree = calc_degree_in_range(degree - calc_degree_for_direction(prev_direction));
+        const uint16_t cur_degree = calc_degree_in_range(degree - calc_degree_for_direction(prev_direction));
         LOG_INF("diff degree:%d", cur_degree);
         const int8_t max_direction = 360 / direction_degree;
         const int8_t cur_direction = (prev_direction != -1) ? prev_direction
@@ -676,9 +676,108 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     return (int8_t)(degree / direction_degree);
 }
 
-#define USE_LUT
-static void rotate_point(const int16_t raw_x, const int16_t raw_y, const int16_t degree, int16_t* x, int16_t* y) {
-#ifdef USE_LUT
+#define USE_INT_LUT
+// #define USE_DBL_LUT
+// #define USE_FULL_LUT
+static void rotate_point(const int16_t raw_x, const int16_t raw_y, const uint16_t degree, int16_t* x, int16_t* y) {
+#if defined(USE_INT_LUT)
+// #define SCALER_100
+#ifdef SCALER_100
+    static const int32_t sin_tbl[] = {
+         0,  2,  3,  5,  7,   9,  10,  12,  14,  16,
+        17, 19, 21, 22, 24,  26,  28,  29,  31,  33,
+        34, 36, 37, 39, 41,  42,  44,  45,  47,  48,
+        50, 52, 53, 54, 56,  57,  59,  60,  62,  63,
+        64, 66, 67, 68, 69,  71,  72,  73,  74,  75,
+        77, 78, 79, 80, 81,  82,  83,  84,  85,  86,
+        87, 87, 88, 89, 90,  91,  91,  92,  93,  93,
+        94, 95, 95, 96, 96,  97,  97,  97,  98,  98,
+        98, 99, 99, 99, 99, 100, 100, 100, 100, 100,
+        100,
+    };
+    const int32_t SCALER = 100;
+#else
+    // normalize sin table with int16_t max
+    static const int32_t sin_tbl[] = {
+            0,   572,  1144,  1715,  2286,  2856,  3425,  3993,  4560,  5126,
+         5690,  6252,  6813,  7371,  7927,  8481,  9032,  9580, 10126, 10668,
+        11207, 11743, 12275, 12803, 13328, 13848, 14364, 14876, 15383, 15886,
+        16383, 16876, 17364, 17846, 18323, 18794, 19260, 19720, 20173, 20621,
+        21062, 21497, 21925, 22347, 22762, 23170, 23571, 23964, 24351, 24730,
+        25101, 25465, 25821, 26169, 26509, 26841, 27165, 27481, 27788, 28087,
+        28377, 28659, 28932, 29196, 29451, 29697, 29934, 30162, 30381, 30591,
+        30791, 30982, 31163, 31335, 31498, 31650, 31794, 31927, 32051, 32165,
+        32269, 32364, 32448, 32523, 32587, 32642, 32687, 32722, 32747, 32762,
+        32767,
+    };
+    const int32_t SCALER = 32767;
+#endif
+
+    if (degree < 90) {
+        const uint8_t sin_index = degree;
+        const uint8_t cos_index  = 90 - degree;
+        *x = (int16_t)((  raw_x * sin_tbl[cos_index] + raw_y * sin_tbl[sin_index]) / SCALER);
+        *y = (int16_t)((- raw_x * sin_tbl[sin_index] + raw_y * sin_tbl[cos_index]) / SCALER);
+    } else if (degree < 180) {
+        const uint8_t sin_index = 180 - degree;
+        const uint8_t cos_index  = degree - 90;
+        *x = (int16_t)((- raw_x * sin_tbl[cos_index] + raw_y * sin_tbl[sin_index]) / SCALER);
+        *y = (int16_t)((- raw_x * sin_tbl[sin_index] - raw_y * sin_tbl[cos_index]) / SCALER);
+    } else if (degree < 270) {
+        const uint8_t sin_index = degree - 180;
+        const uint8_t cos_index  = 270 - degree;
+        *x = (int16_t)((- raw_x * sin_tbl[cos_index] - raw_y * sin_tbl[sin_index]) / SCALER);
+        *y = (int16_t)((  raw_x * sin_tbl[sin_index] - raw_y * sin_tbl[cos_index]) / SCALER);
+    } else  {
+        const uint8_t sin_index = 360 - degree;
+        const uint8_t cos_index  = degree - 270;
+        *x = (int16_t)((  raw_x * sin_tbl[cos_index] - raw_y * sin_tbl[sin_index]) / SCALER);
+        *y = (int16_t)((  raw_x * sin_tbl[sin_index] + raw_y * sin_tbl[cos_index]) / SCALER);
+    }
+
+#elif defined(USE_DBL_LUT)
+    static const double sin_tbl[] = {
+        0.0, 0.017452, 0.034899, 0.052336, 0.069756, 0.087156,
+        0.104528, 0.121869, 0.139173, 0.156434, 0.173648, 0.190809,
+        0.207912, 0.224951, 0.241922, 0.258819, 0.275637, 0.292372,
+        0.309017, 0.325568, 0.342020, 0.358368, 0.374607, 0.390731,
+        0.406737, 0.422618, 0.438371, 0.453990, 0.469472, 0.484810,
+        0.5, 0.515038, 0.529919, 0.544639, 0.559193, 0.573576,
+        0.587785, 0.601815, 0.615661, 0.629320, 0.642788, 0.656059,
+        0.669131, 0.681998, 0.694658, 0.707107, 0.719340, 0.731354,
+        0.743145, 0.754710, 0.766044, 0.777146, 0.788011, 0.798636,
+        0.809017, 0.819152, 0.829038, 0.838671, 0.848048, 0.857167,
+        0.866025, 0.874620, 0.882948, 0.891007, 0.898794, 0.906308,
+        0.913545, 0.920505, 0.927184, 0.933580, 0.939693, 0.945519,
+        0.951057, 0.956305, 0.961262, 0.965926, 0.970296, 0.974370,
+        0.978148, 0.981627, 0.984808, 0.987688, 0.990268, 0.992546,
+        0.994522, 0.996195, 0.997564, 0.998630, 0.999391, 0.999848,
+        1.0,
+    };
+
+    if (degree < 90) {
+        const uint8_t sin_index = degree;
+        const uint8_t cos_index  = 90 - degree;
+        *x = (int16_t)(  raw_x * sin_tbl[cos_index] + raw_y * sin_tbl[sin_index]);
+        *y = (int16_t)(- raw_x * sin_tbl[sin_index] + raw_y * sin_tbl[cos_index]);
+    } else if (degree < 180) {
+        const uint8_t sin_index = 180 - degree;
+        const uint8_t cos_index  = degree - 90;
+        *x = (int16_t)(- raw_x * sin_tbl[cos_index] + raw_y * sin_tbl[sin_index]);
+        *y = (int16_t)(- raw_x * sin_tbl[sin_index] - raw_y * sin_tbl[cos_index]);
+    } else if (degree < 270) {
+        const uint8_t sin_index = degree - 180;
+        const uint8_t cos_index  = 270 - degree;
+        *x = (int16_t)(- raw_x * sin_tbl[cos_index] - raw_y * sin_tbl[sin_index]);
+        *y = (int16_t)(  raw_x * sin_tbl[sin_index] - raw_y * sin_tbl[cos_index]);
+    } else  {
+        const uint8_t sin_index = 360 - degree;
+        const uint8_t cos_index  = degree - 270;
+        *x = (int16_t)(  raw_x * sin_tbl[cos_index] - raw_y * sin_tbl[sin_index]);
+        *y = (int16_t)(  raw_x * sin_tbl[sin_index] + raw_y * sin_tbl[cos_index]);
+    }
+
+#elif defined(USE_FULL_LUT)
     static const double cos_tbl[] = {
         1.0, 0.999848, 0.999391, 0.998630, 0.997564, 0.996195,
         0.994522, 0.992546, 0.990268, 0.987688, 0.984808, 0.981627,
@@ -899,7 +998,7 @@ static int pmw3610_report_data(const struct device *dev) {
         }
     }
 
-    const int16_t degree = calc_degree_for_direction(direction);
+    const uint16_t degree = calc_degree_for_direction(direction);
 
     int16_t x = 0;
     int16_t y = 0;
