@@ -594,8 +594,8 @@ static uint16_t calc_degree_in_range(const int16_t degree) {
 }
 
 static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_direction) {
-    const static uint32_t dir_shift_threshold = CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD * CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD;
-    const static uint32_t dir_detect_threshold = CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD * CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD;
+    static const uint32_t dir_shift_threshold = CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD * CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD;
+    static const uint32_t dir_detect_threshold = CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD * CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD;
 
     static int16_t x = 0;
     static int16_t y = 0;
@@ -1169,9 +1169,9 @@ static int pmw3610_init(const struct device *dev) {
     last_orientation_layer = default_layer;
 
     direction_degree = CONFIG_PMW3610_DIRECTION_ANGLE;
-    while(360 % direction_degree != 0) {
+    while (360 % direction_degree != 0) {
         direction_degree++;
-    };
+    }
 
     // init device pointer
     data->dev = dev;
