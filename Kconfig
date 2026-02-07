@@ -160,7 +160,7 @@ config PMW3610_DIRECTION_DETECTION_LAYER
 config PMW3610_DIRECTION_ANGLE
   int "Angle of each direction"
   default 45
-  range 3 45
+  range 2 45
 
 module = PMW3610
 module-str = PMW3610
