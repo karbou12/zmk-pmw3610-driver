@@ -588,14 +588,14 @@ static uint16_t calc_degree_for_direction(const int8_t direction) {
     return (direction == -1) ? last_orientation_layer * 45 : direction * direction_degree;
 }
 
-static int16_t calc_degree_in_range(const int16_t degree) {
+static uint16_t calc_degree_in_range(const int16_t degree) {
     const int16_t mod = degree % 360;
     return (mod >= 0) ? mod : mod + 360;
 }
 
 static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_direction) {
-    const static int32_t dir_shift_threshold = CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD * CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD;
-    const static int32_t dir_detect_threshold = CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD * CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD;
+    const static uint32_t dir_shift_threshold = CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD * CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD;
+    const static uint32_t dir_detect_threshold = CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD * CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD;
 
     static int16_t x = 0;
     static int16_t y = 0;
@@ -615,10 +615,10 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     x += cur_x;
     y += cur_y;
 
-    const int32_t distance = x * x + y * y;
+    const uint32_t distance = x * x + y * y;
 
     if (diff_time < CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS) {
-        LOG_DBG("under detection [dst:%d %d -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
+        LOG_DBG("under detection [dst:%d %d -> %u/%u/%u] [time:%lld - %lld = %lld/%d]",
                 x, y, distance, dir_shift_threshold, dir_detect_threshold,
                 curr_time, prev_time,
                 diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
@@ -631,7 +631,7 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     const double radian = atan2(y, x);
     int16_t degree = (int16_t)(radian * 180 / M_PI);
 
-    LOG_INF("finish detection [dst:%d %d (degree:%d) -> %ld/%lu/%lu] [time:%lld - %lld = %lld/%ld]",
+    LOG_INF("finish detection [dst:%d %d (degree:%d) -> %u/%u/%u] [time:%lld - %lld = %lld/%d]",
             x, y, degree, distance, dir_shift_threshold, dir_detect_threshold,
             curr_time, prev_time,
             diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
@@ -658,9 +658,9 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     if (is_shift_mode) {
         const uint16_t cur_degree = calc_degree_in_range(degree - calc_degree_for_direction(prev_direction));
         LOG_INF("diff degree:%d", cur_degree);
-        const int8_t max_direction = 360 / direction_degree;
-        const int8_t cur_direction = (prev_direction != -1) ? prev_direction
-            : (int8_t)(last_orientation_layer * (max_direction / 8.0));
+        const uint8_t max_direction = 360 / direction_degree;
+        const uint8_t cur_direction = (prev_direction != -1) ? prev_direction
+            : (uint8_t)(last_orientation_layer * (max_direction / 8.0));
         const int8_t next_direction = (cur_degree < 90 || 270 < cur_degree) ? cur_direction - 1 : cur_direction + 1;
 
         return (next_direction < 0) ? max_direction - 1
@@ -1024,7 +1024,7 @@ static int pmw3610_report_data(const struct device *dev) {
     total_time += diff_time;
     const uint16_t max_count = 1000;
     if (log_count++ == max_count) {
-        LOG_WRN("[ROTATE PERFORMANCE] total time:%lu, ave:%lu, min:%lu, max:%lu\n",
+        LOG_WRN("[ROTATE PERFORMANCE] total time:%u, ave:%u, min:%u, max:%u\n",
                 total_time, total_time / max_count, min_diff_time, max_diff_time);
         log_count = 0;
         min_diff_time = 0;
