@@ -1161,12 +1161,22 @@ static int pmw3610_init(const struct device *dev) {
     int err;
 
     // 🆕 起動時にデフォルトレイヤーを適用
-    uint8_t default_layer = CONFIG_NAPE_DEFAULT_LAYER;
+    uint8_t default_layer = (CONFIG_NAPE_DEFAULT_LAYER == -1) ? 0 : CONFIG_NAPE_DEFAULT_LAYER;
     LOG_INF("Setting default layer to %d", default_layer);
     zmk_keymap_layer_activate(default_layer);
 
     // 🔹 ここで last_orientation_layer を初期化
-    last_orientation_layer = default_layer;
+    if (CONFIG_NAPE_DEFAULT_LAYER != -1) {
+        last_orientation_layer = default_layer;
+    } else if (IS_ENABLED(CONFIG_PMW3610_ORIENTATION_0)) {
+        last_orientation_layer = 0;
+    } else if (IS_ENABLED(CONFIG_PMW3610_ORIENTATION_90)) {
+        last_orientation_layer = 2;
+    } else if (IS_ENABLED(CONFIG_PMW3610_ORIENTATION_180)) {
+        last_orientation_layer = 4;
+    } else if (IS_ENABLED(CONFIG_PMW3610_ORIENTATION_270)) {
+        last_orientation_layer = 6;
+    }
 
     direction_degree = CONFIG_PMW3610_DIRECTION_ANGLE;
     while (360 % direction_degree != 0) {
