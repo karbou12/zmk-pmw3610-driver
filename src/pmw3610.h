@@ -135,6 +135,10 @@ extern "C" {
 #define PMW3610_SCROLL_Y_POSITIVE 1
 #endif
 
+#ifndef CONFIG_NAPE_DEFAULT_LAYER
+#define CONFIG_NAPE_DEFAULT_LAYER -1
+#endif
+
 #ifdef __cplusplus
 }
 #endif
