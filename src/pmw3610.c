@@ -582,10 +582,11 @@ static enum pixart_input_mode get_input_mode_for_current_layer(const struct devi
 }
 
 static uint8_t last_orientation_layer = 0;  // 最後に適用された向きを記録
+static int8_t prev_direction = -1;
 static uint8_t direction_degree = 0;
 
-static uint16_t calc_degree_for_direction(const int8_t direction) {
-    return (direction == -1) ? last_orientation_layer * 45 : direction * direction_degree;
+static uint16_t calc_degree_for_direction() {
+    return (prev_direction == -1) ? last_orientation_layer * 45 : prev_direction * direction_degree;
 }
 
 static uint16_t calc_degree_in_range(const int16_t degree) {
@@ -593,7 +594,73 @@ static uint16_t calc_degree_in_range(const int16_t degree) {
     return (mod >= 0) ? mod : mod + 360;
 }
 
-static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const int8_t prev_direction) {
+static int8_t rotate_device(const bool is_cw) {
+    const uint8_t max_direction = 360 / direction_degree;
+    const uint8_t cur_direction = (prev_direction != -1) ? prev_direction
+        : (uint8_t)(last_orientation_layer * (max_direction / 8.0));
+    const int8_t next_direction = is_cw ? cur_direction + 1 : cur_direction - 1;
+
+    prev_direction = (next_direction < 0) ? max_direction - 1
+        : (max_direction <= next_direction) ? 0
+        : next_direction;
+    LOG_WRN("rotate direction %d -> %d", cur_direction, prev_direction);
+    return prev_direction;
+}
+
+void rotate_device_with_step(const int8_t step_angle_degree) {
+    static int8_t sum_angle_degree = 0;
+    static int8_t total = 0;
+
+    static int64_t prev_time = 0;
+    int64_t curr_time = k_uptime_get();
+    const int64_t diff_time = curr_time - prev_time;
+    if ((prev_time == 0) || (diff_time > 3000)) {
+        prev_time = curr_time;
+        sum_angle_degree = 0;
+        total = 0;
+    }
+
+    sum_angle_degree += step_angle_degree;
+    LOG_WRN("%s +%d -> %d\n", __FUNCTION__, step_angle_degree, sum_angle_degree);
+
+    bool is_rotate = false;
+    uint8_t count = 0;
+    int8_t tmp_angle_degree = sum_angle_degree;
+
+    if (sum_angle_degree > 0) {
+        // int8_t tmp_angle_degree = sum_angle_degree + direction_degree / 2;
+        while (tmp_angle_degree >= direction_degree) {
+            rotate_device(true);
+            is_rotate = true;
+            count++;
+            total++;
+            tmp_angle_degree -= direction_degree;
+            if (tmp_angle_degree < 0) {
+                tmp_angle_degree = 0;
+            }
+        }
+    } else if (sum_angle_degree < 0) {
+        // int8_t tmp_angle_degree = sum_angle_degree - direction_degree / 2;
+        while (tmp_angle_degree <= -direction_degree) {
+            rotate_device(false);
+            is_rotate = true;
+            count++;
+            total++;
+            tmp_angle_degree += direction_degree;
+            if (tmp_angle_degree > 0) {
+                tmp_angle_degree = 0;
+            }
+        }
+    }
+
+    if (is_rotate) {
+        LOG_WRN("count:%d, total:%d, remain angle:%d\n", count, total, tmp_angle_degree);
+        sum_angle_degree = tmp_angle_degree;
+        return;
+    }
+}
+
+static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y) {
     static const uint32_t dir_shift_threshold = CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD * CONFIG_PMW3610_DIRECTION_SHIFT_THRESHOLD;
     static const uint32_t dir_detect_threshold = CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD * CONFIG_PMW3610_DIRECTION_DETECTION_DISTANCE_THRESHOLD;
 
@@ -656,16 +723,9 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y, const i
     }
 
     if (is_shift_mode) {
-        const uint16_t cur_degree = calc_degree_in_range(degree - calc_degree_for_direction(prev_direction));
+        const uint16_t cur_degree = calc_degree_in_range(degree - calc_degree_for_direction());
         LOG_INF("diff degree:%d", cur_degree);
-        const uint8_t max_direction = 360 / direction_degree;
-        const uint8_t cur_direction = (prev_direction != -1) ? prev_direction
-            : (uint8_t)(last_orientation_layer * (max_direction / 8.0));
-        const int8_t next_direction = (cur_degree < 90 || 270 < cur_degree) ? cur_direction - 1 : cur_direction + 1;
-
-        return (next_direction < 0) ? max_direction - 1
-            : (max_direction <= next_direction) ? 0
-            : next_direction;
+        return rotate_device((cur_degree < 90 || 270 < cur_degree) ? false : true);
     }
 
     degree -= 270;
@@ -974,7 +1034,6 @@ static int pmw3610_report_data(const struct device *dev) {
     int16_t raw_y =
         TOINT16((buf[PMW3610_Y_L_POS] + ((buf[PMW3610_XY_H_POS] & 0x0F) << 8)), 12) / dividor;
 
-    static int8_t direction = -1;
     static bool is_direction_changed = false;
 
     if (input_mode == MOVE) {
@@ -984,10 +1043,10 @@ static int pmw3610_report_data(const struct device *dev) {
                 return 0;
             }
 
-            const int8_t detected_direction = detect_direction(raw_x, raw_y, direction);
-            if (direction != detected_direction) {
-                LOG_INF("direction %d -> %d", direction, detected_direction);
-                direction = detected_direction;
+            const int8_t detected_direction = detect_direction(raw_x, raw_y);
+            if (prev_direction != detected_direction) {
+                LOG_INF("direction %d -> %d", prev_direction, detected_direction);
+                prev_direction = detected_direction;
                 is_direction_changed = true;
             }
 
@@ -998,7 +1057,7 @@ static int pmw3610_report_data(const struct device *dev) {
         }
     }
 
-    const uint16_t degree = calc_degree_for_direction(direction);
+    const uint16_t degree = calc_degree_for_direction();
 
     int16_t x = 0;
     int16_t y = 0;

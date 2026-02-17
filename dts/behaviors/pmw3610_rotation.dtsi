@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2026 Tano Karbou (github: karbou12 / X: @karbou_12)
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <dt-bindings/zmk/behaviors.h>
+#include <dt-bindings/zmk/pmw3610_rotation.h>
+
+/ {
+    behaviors {
+#if ZMK_BEHAVIOR_OMIT(ROT_CW)
+    /omit-if-no-ref/
+#endif
+        rot_cw: pmw3610_rot_cw {
+            compatible = "zmk,behavior-pmw3610-rotation";
+            #binding-cells = <0>;
+            cw-mode = ROT_CW;
+            step-angle-degree = <45>;
+            display-name = "PMW3610 CW Rotation";
+        };
+
+        rot_ccw: pmw3610_rot_ccw {
+            compatible = "zmk,behavior-pmw3610-rotation";
+            #binding-cells = <0>;
+            cw-mode = ROT_CCW;
+            step-angle-degree = <45>;
+            display-name = "PMW3610 CCW Rotation";
+        };
+    };
+};
