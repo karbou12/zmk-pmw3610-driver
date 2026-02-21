@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+#ifdef CONFIG_PWM3610
 #include <dt-bindings/zmk/behaviors.h>
 #include <dt-bindings/zmk/pmw3610_rotation.h>
 
@@ -29,3 +30,4 @@
         };
     };
 };
+#endif
