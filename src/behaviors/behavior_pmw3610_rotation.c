@@ -15,7 +15,6 @@
 #include <dt-bindings/zmk/pmw3610_rotation.h>
 #include <pmw3610.h>
 
-// LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 LOG_MODULE_DECLARE(pmw3610, CONFIG_INPUT_LOG_LEVEL);
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
@@ -32,7 +31,6 @@ struct behavior_pmw3610_rotation_config {
 
 static int on_pmw3610_rotation_binding_pressed(struct zmk_behavior_binding *binding,
                                                struct zmk_behavior_binding_event event) {
-    LOG_WRN("%s\n", __FUNCTION__);
     const struct device *dev = zmk_behavior_get_binding(binding->behavior_dev);
     const struct behavior_pmw3610_rotation_config *cfg = dev->config;
 

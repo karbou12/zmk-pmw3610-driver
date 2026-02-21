@@ -603,7 +603,7 @@ static int8_t rotate_device(const bool is_cw) {
     prev_direction = (next_direction < 0) ? max_direction - 1
         : (max_direction <= next_direction) ? 0
         : next_direction;
-    LOG_WRN("rotate direction %d -> %d", cur_direction, prev_direction);
+    LOG_INF("rotate direction %d -> %d", cur_direction, prev_direction);
     return prev_direction;
 }
 
@@ -621,7 +621,7 @@ void rotate_device_with_step(const int8_t step_angle_degree) {
     }
 
     sum_angle_degree += step_angle_degree;
-    LOG_WRN("%s +%d -> %d\n", __FUNCTION__, step_angle_degree, sum_angle_degree);
+    LOG_DBG("%s +%d -> %d\n", __FUNCTION__, step_angle_degree, sum_angle_degree);
 
     bool is_rotate = false;
     uint8_t count = 0;
@@ -654,7 +654,7 @@ void rotate_device_with_step(const int8_t step_angle_degree) {
     }
 
     if (is_rotate) {
-        LOG_WRN("count:%d, total:%d, remain angle:%d\n", count, total, tmp_angle_degree);
+        LOG_DBG("count:%d, total:%d, remain angle:%d\n", count, total, tmp_angle_degree);
         sum_angle_degree = tmp_angle_degree;
         return;
     }
@@ -698,7 +698,7 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y) {
     const double radian = atan2(y, x);
     int16_t degree = (int16_t)(radian * 180 / M_PI);
 
-    LOG_INF("finish detection [dst:%d %d (degree:%d) -> %u/%u/%u] [time:%lld - %lld = %lld/%d]",
+    LOG_DBG("finish detection [dst:%d %d (degree:%d) -> %u/%u/%u] [time:%lld - %lld = %lld/%d]",
             x, y, degree, distance, dir_shift_threshold, dir_detect_threshold,
             curr_time, prev_time,
             diff_time, CONFIG_PMW3610_DIRECTION_DETECTION_SAMPLE_TIME_MS);
@@ -724,14 +724,14 @@ static int8_t detect_direction(const int16_t cur_x, const int16_t cur_y) {
 
     if (is_shift_mode) {
         const uint16_t cur_degree = calc_degree_in_range(degree - calc_degree_for_direction());
-        LOG_INF("diff degree:%d", cur_degree);
+        LOG_DBG("diff degree:%d", cur_degree);
         return rotate_device((cur_degree < 90 || 270 < cur_degree) ? false : true);
     }
 
     degree -= 270;
     degree += (int16_t)(direction_degree / 2);
     degree = calc_degree_in_range(degree);
-    LOG_INF("corrected degree:%d", degree);
+    LOG_DBG("corrected degree:%d", degree);
 
     return (int8_t)(degree / direction_degree);
 }
@@ -1083,7 +1083,7 @@ static int pmw3610_report_data(const struct device *dev) {
     total_time += diff_time;
     const uint16_t max_count = 1000;
     if (log_count++ == max_count) {
-        LOG_WRN("[ROTATE PERFORMANCE] total time:%u, ave:%u, min:%u, max:%u\n",
+        LOG_DBG("[ROTATE PERFORMANCE] total time:%u, ave:%u, min:%u, max:%u\n",
                 total_time, total_time / max_count, min_diff_time, max_diff_time);
         log_count = 0;
         min_diff_time = 0;
