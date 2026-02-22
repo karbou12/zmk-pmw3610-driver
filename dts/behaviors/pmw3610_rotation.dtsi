@@ -4,30 +4,28 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifdef CONFIG_PWM3610
 #include <dt-bindings/zmk/behaviors.h>
 #include <dt-bindings/zmk/pmw3610_rotation.h>
 
 / {
     behaviors {
-#if ZMK_BEHAVIOR_OMIT(ROT_CW)
-    /omit-if-no-ref/
+#if ZMK_BEHAVIOR_OMIT(TB_ROT_45)
+        /omit-if-no-ref/
 #endif
-        rot_cw: pmw3610_rot_cw {
+        tb_rot_45: tr45 {
             compatible = "zmk,behavior-pmw3610-rotation";
-            #binding-cells = <0>;
-            cw-mode = ROT_CW;
+            #binding-cells = <1>;
             step-angle-degree = <45>;
-            display-name = "PMW3610 CW Rotation";
+            display-name = "PMW3610 Trackball Rotation with 45 degree";
         };
 
-        rot_ccw: pmw3610_rot_ccw {
-            compatible = "zmk,behavior-pmw3610-rotation";
-            #binding-cells = <0>;
-            cw-mode = ROT_CCW;
-            step-angle-degree = <45>;
-            display-name = "PMW3610 CCW Rotation";
+#if ZMK_BEHAVIOR_OMIT(ENC_TB_ROT_45)
+        /omit-if-no-ref/
+#endif
+        enc_tb_rot_45: enc_tr45 {
+            compatible = "zmk,behavior-sensor-rotate";
+            #sensor-binding-cells = <0>;
+            bindings = <&tb_rot_45 ROT_CCW>, <&tb_rot_45 ROT_CW>;
         };
     };
 };
-#endif

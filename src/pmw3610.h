@@ -139,8 +139,6 @@ extern "C" {
 #define CONFIG_NAPE_DEFAULT_LAYER -1
 #endif
 
-extern void rotate_device_with_step(const int8_t step_angle_degree);
-
 #ifdef __cplusplus
 }
 #endif

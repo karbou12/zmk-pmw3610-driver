@@ -5,5 +5,4 @@
  */
 #pragma once
 
-#define ROT_CW  0
-#define ROT_CCW 1
+extern void rotate_device_with_step(const int8_t step_angle_degree);

@@ -162,6 +162,11 @@ config PMW3610_DIRECTION_ANGLE
   default 45
   range 3 45
 
+config ZMK_BEHAVIOR_PMW3610_ROTATION
+  bool "PMW3610 rotation behavior"
+  default n
+  depends on DT_HAS_ZMK_BEHAVIOR_PMW3610_ROTATION_ENABLED
+
 module = PMW3610
 module-str = PMW3610
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
