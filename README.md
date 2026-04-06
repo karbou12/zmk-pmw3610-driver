@@ -1,4 +1,3 @@
-
 ## 背景
 
 menbou0202 さんが作成した [Nape Trackball](https://men-bou.net/nape/) というトラックボールと3つのキーが付いたキーボードがあります。
@@ -8,6 +7,10 @@ menbou0202 さんが作成した [Nape Trackball](https://men-bou.net/nape/) と
 裏ボタンを使用せずに、トラックボールの操作で向き変更できるようにしました。
 
 他のトラックボールでも流用できると思いますので、参考になれば幸いです。
+
+> [!IMPORTANT]
+> ZMK 0.4 (Zephyr 4.1)対応に伴い、Napeが使用するzmk-pmw3610-driverがzmk-pmw3610-driver-nameに変更になりました。  
+> 最新のNapeで本機能を使用したい場合は、[こちらのリポジトリのdevelop branch](https://github.com/karbou12/zmk-pmw3610-driver-nape/tree/develop) を使用してください。
 
 ## Napeでの使用方法
 
